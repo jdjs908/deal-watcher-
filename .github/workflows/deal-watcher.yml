@@ -2,8 +2,8 @@ name: Gaming PC Deal Watcher
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # every 10 min (use */10 if the repo is public)
-  workflow_dispatch:          # lets you run it manually from the Actions tab
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -20,9 +20,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Look for deals
+      - name: Look for verified deals
         env:
           MAX_PRICE: "1500"
+          CHECK_MINUTES: "10"
           BESTBUY_API_KEY: ${{ secrets.BESTBUY_API_KEY }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
