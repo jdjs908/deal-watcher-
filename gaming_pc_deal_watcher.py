@@ -20,7 +20,7 @@ Usage
 
 Settings (environment variables, all optional)
   MAX_PRICE=1500          price cap
-  CHECK_MINUTES=15        only used when running forever on your own computer
+  CHECK_MINUTES=10        only used when running forever on your own computer
   MAX_AGE_HOURS=12        ignore Slickdeals posts older than this
   PICKUP_ZIP=21501        Best Buy: require in-stock pickup near this ZIP
   PICKUP_MILES=50         pickup search radius
