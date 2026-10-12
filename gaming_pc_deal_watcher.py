@@ -17,7 +17,7 @@ Usage
 
 Settings (environment variables, all optional except as noted)
   MAX_PRICE=1500
-  CHECK_MINUTES=15
+  CHECK_MINUTES=10
   BESTBUY_API_KEY=...        (enables the Best Buy source)
   NTFY_TOPIC=my-secret-topic (install the ntfy app, subscribe to the same topic)
   DISCORD_WEBHOOK=https://discord.com/api/webhooks/...
