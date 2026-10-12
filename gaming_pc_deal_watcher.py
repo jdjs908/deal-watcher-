@@ -45,7 +45,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-MAX_PRICE = float(os.getenv("MAX_PRICE", "1500"))
+MAX_PRICE = float(os.getenv("MAX_PRICE", "1801"))
 CHECK_MINUTES = float(os.getenv("CHECK_MINUTES", "15"))
 MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "24"))
 PICKUP_ZIP = os.getenv("PICKUP_ZIP", "").strip()
