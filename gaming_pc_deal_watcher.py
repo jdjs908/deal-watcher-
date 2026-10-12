@@ -49,7 +49,7 @@ EXCLUDE_RE = re.compile(
     re.I,
 )
 DESKTOP_RE = re.compile(r"desktop|gaming pc|\bpc\b|tower|prebuilt|pre-built|\bomen\b|alienware|aurora", re.I)
-PRICE_RE = re.compile(r"\$\s?([\d]{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)")
+PRICE_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+(?:\.\d{2})?)")
 
 SLICKDEALS_QUERIES = [
     "rtx 5070 desktop",
