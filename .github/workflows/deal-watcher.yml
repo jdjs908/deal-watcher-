@@ -1,0 +1,31 @@
+name: Gaming PC Deal Watcher
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 min (use */10 if the repo is public)
+  workflow_dispatch:          # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Look for deals
+        env:
+          MAX_PRICE: "1500"
+          BESTBUY_API_KEY: ${{ secrets.BESTBUY_API_KEY }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python gaming_pc_deal_watcher.py --once
+      - name: Remember which deals were already sent
+        run: |
+          git config user.name "deal-bot"
+          git config user.email "deal-bot@users.noreply.github.com"
+          git add seen_deals.json || true
+          git diff --cached --quiet || (git commit -m "update seen deals" && git push)
