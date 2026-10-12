@@ -2,7 +2,7 @@ name: Gaming PC Deal Watcher
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # every 30 min (use */10 if the repo is public)
+    - cron: "*/10 * * * *"   # every 10 min (use */10 if the repo is public)
   workflow_dispatch:          # lets you run it manually from the Actions tab
 
 permissions:
