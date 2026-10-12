@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: deal-watcher
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -28,4 +32,8 @@ jobs:
           git config user.name "deal-bot"
           git config user.email "deal-bot@users.noreply.github.com"
           git add seen_deals.json || true
-          git diff --cached --quiet || (git commit -m "update seen deals" && git push)
+          if ! git diff --cached --quiet; then
+            git commit -m "update seen deals"
+            git pull --rebase origin main
+            git push
+          fi
