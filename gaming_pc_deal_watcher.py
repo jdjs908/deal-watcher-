@@ -13,7 +13,7 @@ Edit the GPU_INFO table below to add or remove cards.
 
 Sources
   1. Best Buy official Products API (free key: https://developer.bestbuy.com)
-     - optionally requires in-stock pickup near your ZIP
+     - requires the PC to be orderable with home delivery; nearby pickup is a bonus line
   2. Slickdeals RSS searches (covers Amazon, Newegg, Walmart, Micro Center,
      Dell, HP, Costco, and more). Only posts from the last 24 hours are kept,
      using the post's own timestamp.
@@ -29,7 +29,7 @@ Settings (environment variables, all optional)
   MAX_PRICE=1500          price cap
   MAX_AGE_HOURS=24        Slickdeals posts must be newer than this
   CHECK_MINUTES=15        only used when running forever on your own computer
-  PICKUP_ZIP=21501        Best Buy: require in-stock pickup near this ZIP
+  PICKUP_ZIP=21501        Best Buy: also list nearby stores that have it for pickup (optional bonus)
   PICKUP_MILES=50         pickup search radius
   BESTBUY_API_KEY=...  NTFY_TOPIC=...  DISCORD_WEBHOOK=...
 """
@@ -45,7 +45,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-MAX_PRICE = float(os.getenv("MAX_PRICE", "1801"))
+MAX_PRICE = float(os.getenv("MAX_PRICE", "1500"))
 CHECK_MINUTES = float(os.getenv("CHECK_MINUTES", "15"))
 MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "24"))
 PICKUP_ZIP = os.getenv("PICKUP_ZIP", "").strip()
@@ -86,6 +86,9 @@ EXCLUDE_RE = re.compile(
 )
 DESKTOP_RE = re.compile(r"desktop|gaming pc|\bpc\b|tower|prebuilt|pre-built|\bomen\b|alienware|aurora", re.I)
 PRICE_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+(?:\.\d{2})?)")
+INSTORE_ONLY_RE = re.compile(
+    r"in[- ]store only|store pickup only|pickup only|in[- ]store pickup only|in[- ]store exclusive", re.I)
+FREE_SHIP_RE = re.compile(r"free (?:shipping|s/h|delivery)|ships free", re.I)
 EXPIRED_RE = re.compile(r"this deal has expired|deal has expired|expired deal", re.I)
 
 SLICKDEALS_QUERIES = [
@@ -157,7 +160,8 @@ def fetch_bestbuy():
             + "?"
             + urllib.parse.urlencode(
                 {"apiKey": BESTBUY_API_KEY, "format": "json",
-                 "show": "sku,name,salePrice,regularPrice,url", "pageSize": 50}
+                 "show": "sku,name,salePrice,regularPrice,url,homeDelivery,orderable,freeShipping,shippingCost",
+                 "pageSize": 50}
             )
         )
         try:
@@ -166,10 +170,22 @@ def fetch_bestbuy():
             print(f"[Best Buy] {brand} {model} lookup failed: {e}")
             continue
         for p in data.get("products", []):
+            # Shipping is the priority: skip anything Best Buy says can't be
+            # delivered or isn't currently orderable.
+            if p.get("homeDelivery") is False:
+                continue
+            if p.get("orderable") not in (None, "Available"):
+                continue
+            if p.get("freeShipping"):
+                ship = "🚚 Ships to you - FREE shipping"
+            elif p.get("shippingCost") is not None:
+                ship = f"🚚 Ships to you - shipping ${float(p['shippingCost']):,.0f}"
+            else:
+                ship = "🚚 Ships to you"
             deals.append(
                 {"id": f"bby-{p['sku']}", "sku": p["sku"], "source": "Best Buy",
                  "title": p["name"], "price": p["salePrice"], "was": p.get("regularPrice"),
-                 "url": p["url"], "posted": None}
+                 "url": p["url"], "posted": None, "ship": ship, "rank": 0}
             )
         time.sleep(0.3)
     return deals
@@ -227,11 +243,16 @@ def fetch_slickdeals():
                 continue
             if not (0 <= (now - posted).total_seconds() <= MAX_AGE_HOURS * 3600):
                 continue
+            if INSTORE_ONLY_RE.search(title):
+                continue  # can't be shipped
             m = re.search(r"/f/(\d+)", link)
             deal_id = "sd-" + (m.group(1) if m else (item.findtext("guid") or link))
             deals.append(
                 {"id": deal_id, "source": "Slickdeals", "title": title, "price": price,
-                 "was": None, "url": link, "posted": posted}
+                 "was": None, "url": link, "posted": posted,
+                 "ship": ("🚚 Free shipping (per post title)" if FREE_SHIP_RE.search(title)
+                          else "🚚 Shipping not confirmed - check the page"),
+                 "rank": 1 if FREE_SHIP_RE.search(title) else 2}
             )
         time.sleep(0.5)
     return deals
@@ -429,10 +450,12 @@ def save_state(state):
 def notify(deal):
     was = f" (was ${deal['was']:,.0f})" if deal.get("was") else ""
     lines = [f"[{deal['source']}] ${deal['price']:,.0f}{was}", deal["title"]]
+    if deal.get("ship"):
+        lines.append(deal["ship"])
+    if deal.get("stores"):
+        lines.append("🏬 Bonus - also in stock for pickup: " + "; ".join(deal["stores"]))
     if deal.get("posted"):
         lines.append(age_text(deal["posted"]) + " - may sell out or end soon")
-    if deal.get("stores"):
-        lines.append("In stock for pickup: " + "; ".join(deal["stores"]))
     lines += rating_lines(deal.get("rating"), deal["price"])
     if deal.get("note"):
         lines.append(deal["note"])
@@ -460,6 +483,7 @@ def notify(deal):
 def check_once():
     state = load_state()
     candidates = fetch_bestbuy() + fetch_slickdeals()
+    candidates.sort(key=lambda d: d.get("rank", 2))  # confirmed shipping first
     seen_this_run, new = set(), 0
     for d in candidates:
         if d["id"] in seen_this_run:
@@ -478,13 +502,10 @@ def check_once():
             continue
 
         if d["source"] == "Best Buy" and PICKUP_ZIP:
+            # Pickup is only a bonus line; it never blocks an alert
             stores = bestbuy_pickup_stores(d["sku"])
             time.sleep(0.3)
-            if stores is None:
-                d["note"] = "(couldn't verify pickup stock - check the page)"
-            elif not stores:
-                continue  # nothing in stock nearby; try again next run
-            else:
+            if stores:
                 d["stores"] = stores
         elif d["source"] == "Slickdeals" and slickdeals_expired(d["url"]):
             state[d["id"]] = entry
