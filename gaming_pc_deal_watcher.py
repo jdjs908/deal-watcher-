@@ -19,7 +19,7 @@ Usage
   python gaming_pc_deal_watcher.py --test     # send a test alert
 
 Settings (environment variables, all optional)
-  MAX_PRICE=1500          price cap
+  MAX_PRICE=1650          price cap
   CHECK_MINUTES=10        only used when running forever on your own computer
   MAX_AGE_HOURS=12        ignore Slickdeals posts older than this
   PICKUP_ZIP=21501        Best Buy: require in-stock pickup near this ZIP
@@ -40,7 +40,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-MAX_PRICE = float(os.getenv("MAX_PRICE", "1500"))
+MAX_PRICE = float(os.getenv("MAX_PRICE", "1650"))
 CHECK_MINUTES = float(os.getenv("CHECK_MINUTES", "15"))
 MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "12"))
 PICKUP_ZIP = os.getenv("PICKUP_ZIP", "").strip()
