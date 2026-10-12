@@ -71,8 +71,22 @@ def looks_like_match(title):
 
 
 def first_price(text):
-    m = PRICE_RE.search(text)
-    return float(m.group(1).replace(",", "")) if m else None
+    """Best guess at the actual selling price in a deal title.
+    Skips discount amounts ('$200 off', 'save $300', 'w/ $100 gift card'),
+    then takes the lowest remaining price, so '$1,299 (was $1,899)' reads as 1299.
+    Returns None when the title only shows discounts (no final price)."""
+    prices = []
+    for m in PRICE_RE.finditer(text):
+        after = text[m.end():m.end() + 14].lower()
+        before = text[max(0, m.start() - 14):m.start()].lower()
+        if re.match(r"\s*(\+\s*)?(off|savings|rebate|gift|credit|back|cash ?back|discount|coupon)", after):
+            continue
+        if re.search(r"(save|saving|savings|extra|up to|take|get|minus|w/|with|off)\s*$", before):
+            continue
+        val = float(m.group(1).replace(",", ""))
+        if val >= 400:
+            prices.append(val)
+    return min(prices) if prices else None
 
 
 def fetch_bestbuy():
