@@ -133,5 +133,15 @@
     "price": 1649.99,
     "title": "CyberPowerPC Gaming Desktop: Intel Ultra 7 265F, RTX 5070 (12GB), 16GB DDR5, 1TB SSD $1649.99",
     "t": 1792566862.8558595
+  },
+  "sd-20190870": {
+    "price": 1759.99,
+    "title": "Skytech Gaming KING 95 Gaming PC: Ryzen 7 7800X3D, RTX 5070, 32GB DDR5, 1TB SSD $1759.99",
+    "t": 1792646787.7113495
+  },
+  "fp-RTX 5070|Ryzen 7 7800X3D|32|1.0|1759": {
+    "price": 1759.99,
+    "title": "Skytech Gaming KING 95 Gaming PC: Ryzen 7 7800X3D, RTX 5070, 32GB DDR5, 1TB SSD $1759.99",
+    "t": 1792646787.7113495
   }
 }
