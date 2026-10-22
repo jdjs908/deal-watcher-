@@ -143,5 +143,15 @@
     "price": 1759.99,
     "title": "Skytech Gaming KING 95 Gaming PC: Ryzen 7 7800X3D, RTX 5070, 32GB DDR5, 1TB SSD $1759.99",
     "t": 1792646787.7113495
+  },
+  "sd-20192340": {
+    "price": 1499.99,
+    "title": "PowerSpec G536 Gaming PC: Ryzen 5 7500X3D, RTX 5070, 32GB DDR5, 1TB SSD $1499.99",
+    "t": 1792677699.8208666
+  },
+  "fp-RTX 5070|Ryzen 5 7500X3D|32|1.0|1499": {
+    "price": 1499.99,
+    "title": "PowerSpec G536 Gaming PC: Ryzen 5 7500X3D, RTX 5070, 32GB DDR5, 1TB SSD $1499.99",
+    "t": 1792677699.8208666
   }
 }
