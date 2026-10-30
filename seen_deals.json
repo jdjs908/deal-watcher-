@@ -163,5 +163,15 @@
     "price": 1799.99,
     "title": "PowerSpec G541 Gaming PC: Ryzen 5 7500X3D, RX 9070 XT, 32GB DDR5-6000, 1TB SSD $1799.99",
     "t": 1793308079.1854444
+  },
+  "sd-20231043": {
+    "price": 1799.99,
+    "title": "Skytech Gaming - King 95 Gaming PC - AMD Ryzen 7 9700X - 16GB Memory - NVIDIA GeForce RTX 5070 - 1TB NVMe SSD - White $1799.99",
+    "t": 1793345343.590511
+  },
+  "fp-RTX 5070|Ryzen 7 9700X|16|1.0|1799": {
+    "price": 1799.99,
+    "title": "Skytech Gaming - King 95 Gaming PC - AMD Ryzen 7 9700X - 16GB Memory - NVIDIA GeForce RTX 5070 - 1TB NVMe SSD - White $1799.99",
+    "t": 1793345343.590511
   }
 }
