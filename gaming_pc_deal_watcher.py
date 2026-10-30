@@ -54,7 +54,7 @@ from pathlib import Path
 
 MAX_PRICE = float(os.getenv("MAX_PRICE", "1875"))
 CHECK_MINUTES = float(os.getenv("CHECK_MINUTES", "15"))
-MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "24"))
+MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "1500"))
 PICKUP_ZIP = os.getenv("PICKUP_ZIP", "").strip()
 PICKUP_MILES = os.getenv("PICKUP_MILES", "50").strip() or "50"
 BESTBUY_API_KEY = os.getenv("BESTBUY_API_KEY", "")
