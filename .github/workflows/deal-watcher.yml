@@ -22,7 +22,7 @@ jobs:
           python-version: "3.12"
       - name: Look for deals
         env:
-          MAX_PRICE: "1801"
+          MAX_PRICE: "1875"
           MAX_AGE_HOURS: "24"
           PICKUP_MILES: "50"
           PICKUP_ZIP: ${{ secrets.PICKUP_ZIP }}
