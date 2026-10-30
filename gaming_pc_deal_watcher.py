@@ -6,8 +6,7 @@ alerts you (Discord and/or phone push) with a 1-10 gaming score and an
 estimate of what the PC should cost.
 
 GPUs covered (all roughly RTX 5070 performance or higher)
-  NVIDIA: RTX 5070, 5070 Ti, 5080, 5090, 4070 Ti, 4070 Ti Super, 4080,
-          4080 Super, 4090
+  NVIDIA: RTX 5070, 5070 Ti, 5080, 5090
   AMD:    RX 9070, 9070 XT, 7900 XT, 7900 XTX
 Edit the GPU_INFO table below to add or remove cards.
 
@@ -18,6 +17,13 @@ Sources
      Dell, HP, Costco, and more). Only posts from the last 24 hours are kept,
      using the post's own timestamp.
 
+Your spec rules (edit the MIN_* settings near the top to change them)
+  32GB+ DDR5 at 5600MHz+, Ryzen 5 / Core i5 or better (AMD listed first),
+  B650/B760-or-newer motherboard (no B550/A520/etc), 650W+ PSU rated
+  80+ Bronze or better, air cooling only. A spec the title SHOWS that breaks a
+  rule gets the listing skipped. A spec the title doesn't mention can't be
+  checked, so the alert lists it under "Verify before buying".
+
 Every listing alerts ONCE. Seen listings are remembered in seen_deals.json.
 
 Usage
@@ -26,13 +32,14 @@ Usage
   python gaming_pc_deal_watcher.py --test     # send a sample alert
 
 Settings (environment variables, all optional)
-  MAX_PRICE=1500          price cap
+  MAX_PRICE=1875          price cap
   MAX_AGE_HOURS=24        Slickdeals posts must be newer than this
   CHECK_MINUTES=15        only used when running forever on your own computer
   PICKUP_ZIP=21501        Best Buy: also list nearby stores that have it for pickup (optional bonus)
   PICKUP_MILES=50         pickup search radius
   BESTBUY_API_KEY=...  NTFY_TOPIC=...  DISCORD_WEBHOOK=...
 """
+import html
 import json
 import os
 import re
@@ -45,7 +52,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-MAX_PRICE = float(os.getenv("MAX_PRICE", "1801"))
+MAX_PRICE = float(os.getenv("MAX_PRICE", "1875"))
 CHECK_MINUTES = float(os.getenv("CHECK_MINUTES", "15"))
 MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "24"))
 PICKUP_ZIP = os.getenv("PICKUP_ZIP", "").strip()
@@ -53,6 +60,11 @@ PICKUP_MILES = os.getenv("PICKUP_MILES", "50").strip() or "50"
 BESTBUY_API_KEY = os.getenv("BESTBUY_API_KEY", "")
 NTFY_TOPIC = os.getenv("NTFY_TOPIC", "")
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK", "")
+# Your spec rules
+MIN_RAM_GB = 32
+MIN_RAM_MHZ = 5600
+MIN_PSU_WATTS = 650
+ALLOW_LIQUID_COOLING = os.getenv("ALLOW_LIQUID_COOLING", "0") == "1"   # "air cooling only"
 STATE_FILE = Path(__file__).with_name("seen_deals.json")
 STATE_KEEP_DAYS = 45
 UA = {"User-Agent": "Mozilla/5.0 (compatible; GamingPCDealWatcher/1.0)"}
@@ -63,18 +75,13 @@ UA = {"User-Agent": "Mozilla/5.0 (compatible; GamingPCDealWatcher/1.0)"}
 # Rough estimates, NOT live prices. Edit freely.
 GPU_INFO = [
     ("RTX 5090",          r"RTX\s*-?\s*5090(?!\d)",                       10.0, 2300, 1000),
-    ("RTX 4090",          r"RTX\s*-?\s*4090(?!\d)",                        9.8, 1800, 850),
     ("RTX 5080",          r"RTX\s*-?\s*5080(?!\d)",                        9.4, 1050, 850),
     ("RTX 5070 Ti",       r"RTX\s*-?\s*5070\s*-?\s*Ti(?![a-z])",           8.7,  780, 750),
-    ("RTX 4080 Super",    r"RTX\s*-?\s*4080\s*-?\s*Super",                 8.6,  950, 750),
-    ("RTX 4080",          r"RTX\s*-?\s*4080(?!\d)",                        8.5,  900, 750),
     ("RX 7900 XTX",       r"RX\s*-?\s*7900\s*-?\s*XTX",                    8.6,  800, 800),
     ("RX 9070 XT",        r"RX\s*-?\s*9070\s*-?\s*XT",                     8.5,  650, 750),
-    ("RTX 4070 Ti Super", r"RTX\s*-?\s*4070\s*-?\s*Ti\s*-?\s*Super",       8.2,  750, 700),
     ("RX 9070",           r"RX\s*-?\s*9070(?!\d)(?!\s*-?\s*(?:XT|GRE))",   8.0,  560, 650),
     ("RX 7900 XT",        r"RX\s*-?\s*7900\s*-?\s*XT(?![A-Za-z])",         7.9,  650, 750),
     ("RTX 5070",          r"RTX\s*-?\s*5070(?!\d)",                        7.8,  550, 750),
-    ("RTX 4070 Ti",       r"RTX\s*-?\s*4070\s*-?\s*Ti(?![a-z])",           7.7,  600, 700),
 ]
 GPU_TABLE = {n: (re.compile(rx, re.I), sc, pr, w) for n, rx, sc, pr, w in GPU_INFO}
 
@@ -84,7 +91,7 @@ EXCLUDE_RE = re.compile(
     r"\bgpu only\b|handheld|\bmini ?pc\b.*\boculink|\bcase\b only",
     re.I,
 )
-DESKTOP_RE = re.compile(r"desktop|gaming pc|\bpc\b|tower|prebuilt|pre-built|\bomen\b|alienware|aurora", re.I)
+DESKTOP_RE = re.compile(r"desktop|gaming pc|pc\b|tower|prebuilt|pre-built|\bomen\b|alienware|aurora|cyberpower|ibuypower|skytech|maingear|nzxt|legion", re.I)
 PRICE_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+(?:\.\d{2})?)")
 INSTORE_ONLY_RE = re.compile(
     r"in[- ]store only|store pickup only|pickup only|in[- ]store pickup only|in[- ]store exclusive", re.I)
@@ -92,14 +99,16 @@ FREE_SHIP_RE = re.compile(r"free (?:shipping|s/h|delivery)|ships free", re.I)
 EXPIRED_RE = re.compile(r"this deal has expired|deal has expired|expired deal", re.I)
 
 SLICKDEALS_QUERIES = [
+    # plain GPU names (catches titles with no "desktop"/"PC" word) ...
+    "rtx 5070", "rtx 5070 ti", "rtx 5080", "rtx 5090", "rx 9070", "rx 9070 xt", "rx 7900",
+    # ... plus the more specific ones
     "rtx 5070 desktop", "rtx 5070 ti desktop", "rtx 5080 desktop", "rtx 5090 desktop",
-    "rtx 5070 gaming pc", "rtx 4080 desktop", "rtx 4070 ti desktop", "rtx 4090 desktop",
+    "rtx 5070 gaming pc",
     "radeon rx 9070 desktop", "radeon rx 7900 desktop", "rx 9070 xt gaming pc",
 ]
 # (brand word, model number) pairs sent to the Best Buy search
 BESTBUY_SEARCHES = [
     ("rtx", "5070"), ("rtx", "5080"), ("rtx", "5090"),
-    ("rtx", "4070"), ("rtx", "4080"), ("rtx", "4090"),
     ("radeon", "9070"), ("radeon", "7900"),
 ]
 
@@ -117,8 +126,15 @@ def parse_gpu(t):
     return None
 
 
+PC_HINT_RE = re.compile(r"(?<!G)DDR[45]|\bSSD\b|\bNVMe\b|\bRAM\b|\bmemory\b", re.I)
+
+
 def looks_like_match(title):
-    return bool(parse_gpu(title)) and not EXCLUDE_RE.search(title) and bool(DESKTOP_RE.search(title))
+    """GPU in the title, not a laptop/standalone card, and it reads like a whole PC:
+    a desktop word OR a CPU OR RAM/SSD mentioned (so 'Skytech Shadow RTX 5070 Ryzen 7' still counts)."""
+    if not parse_gpu(title) or EXCLUDE_RE.search(title):
+        return False
+    return bool(DESKTOP_RE.search(title) or parse_cpu(title) or PC_HINT_RE.search(title))
 
 
 def first_price(text):
@@ -152,8 +168,9 @@ def fetch_bestbuy():
     if not BESTBUY_API_KEY:
         return []
     deals = []
-    for brand, model in BESTBUY_SEARCHES:
-        q = f"(search=desktop&search={brand}&search={model}&salePrice<{MAX_PRICE:.0f}&onlineAvailability=true)"
+    skipped_ship = 0
+    for (brand, model), kind in [(b, k) for b in BESTBUY_SEARCHES for k in ("desktop", "pc")]:
+        q = f"(search={kind}&search={brand}&search={model}&salePrice<{MAX_PRICE:.0f}&onlineAvailability=true)"
         url = (
             "https://api.bestbuy.com/v1/products"
             + urllib.parse.quote(q, safe="=&()<>")
@@ -167,14 +184,13 @@ def fetch_bestbuy():
         try:
             data = json.loads(http_get(url))
         except Exception as e:
-            print(f"[Best Buy] {brand} {model} lookup failed: {e}")
+            print(f"[Best Buy] {kind} {brand} {model} lookup failed: {e}")
             continue
         for p in data.get("products", []):
             # Shipping is the priority: skip anything Best Buy says can't be
             # delivered or isn't currently orderable.
-            if p.get("homeDelivery") is False:
-                continue
-            if p.get("orderable") not in (None, "Available"):
+            if p.get("homeDelivery") is False or p.get("orderable") not in (None, "Available"):
+                skipped_ship += 1
                 continue
             if p.get("freeShipping"):
                 ship = "🚚 Ships to you - FREE shipping"
@@ -188,6 +204,7 @@ def fetch_bestbuy():
                  "url": p["url"], "posted": None, "ship": ship, "rank": 0}
             )
         time.sleep(0.3)
+    print(f"[Best Buy] {len(deals)} shippable listings kept, {skipped_ship} dropped (no home delivery / not orderable)")
     return deals
 
 
@@ -232,6 +249,14 @@ def fetch_slickdeals():
             title = (item.findtext("title") or "").strip()
             link = (item.findtext("link") or "").strip()
             price = first_price(title)
+            price_note = None
+            if price is None:
+                # Title only shows discounts: look for "on sale for $X" style wording in the post text
+                desc = re.sub(r"<[^>]+>", " ", html.unescape(item.findtext("description") or ""))
+                m = re.search(r"(?:on sale for|sale price|priced at|now|for|only)[:\s]*\$\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+(?:\.\d{2})?)", desc, re.I)
+                if m:
+                    price = float(m.group(1).replace(",", ""))
+                    price_note = "💲 Price taken from the post text, not the title - confirm it on the page"
             if price is None:
                 continue
             # Post timestamp must exist and be within the last MAX_AGE_HOURS
@@ -249,7 +274,7 @@ def fetch_slickdeals():
             deal_id = "sd-" + (m.group(1) if m else (item.findtext("guid") or link))
             deals.append(
                 {"id": deal_id, "source": "Slickdeals", "title": title, "price": price,
-                 "was": None, "url": link, "posted": posted,
+                 "was": None, "url": link, "posted": posted, "note": price_note,
                  "ship": ("🚚 Free shipping (per post title)" if FREE_SHIP_RE.search(title)
                           else "🚚 Shipping not confirmed - check the page"),
                  "rank": 1 if FREE_SHIP_RE.search(title) else 2}
@@ -297,7 +322,7 @@ def parse_cpu(t):
         if suf == "G":
             score -= 0.8
         return (f"Ryzen {tier} {model}{suf}", max(1.0, min(10.0, score)), price)
-    m = re.search(r"\bi([3579])[- ]?(\d{4,5})\s*(KF|KS|K|F|T)?", t, re.I)
+    m = re.search(r"\bi([3579])[- ]?(\d{4,5})(?!\d)(?!\s?(?:GB|TB|MHz|W\b))\s*(KF|KS|K|F|T)?", t, re.I)
     if m:
         tier, model, suf = int(m.group(1)), m.group(2), (m.group(3) or "").upper()
         gen = int(model[:2]) if len(model) == 5 else int(model[0])
@@ -310,11 +335,16 @@ def parse_cpu(t):
 
 def parse_ram(t):
     """Returns (gb, ddr_type) or None. GPU names + VRAM are stripped first."""
+    ddr = "ddr5" if re.search(r"DDR5", t, re.I) else "ddr4" if re.search(r"DDR4", t, re.I) else "unknown"
+    # Best signal: a size written right next to DDR / RAM / Memory (e.g. "32GB DDR5")
+    m = re.search(r"(?<![\d.])(\d{1,3})\s?GB\s*(?:DDR[45]|RAM\b|(?:system )?memory)", t, re.I)
+    if m and int(m.group(1)) in RAM_SCORES:
+        return int(m.group(1)), ddr
+    # Otherwise strip GPU names (+ their VRAM) so "5070 Ti 16GB" isn't read as RAM
     s = re.sub(r"(?:RTX|RX)\s*-?\s*\d{4}(?:\s*-?\s*(?:Ti|XTX|XT|Super))*(?:\s*\d{1,2}\s*GB)?", " ", t, flags=re.I)
     for m in re.finditer(r"(?<![\d.])(\d{1,3})\s?GB\b(?!\s*(?:SSD|NVMe|storage|VRAM|GDDR))", s, re.I):
         gb = int(m.group(1))
         if gb in RAM_SCORES:
-            ddr = "ddr5" if re.search(r"DDR5", t, re.I) else "ddr4" if re.search(r"DDR4", t, re.I) else "unknown"
             return gb, ddr
     return None
 
@@ -431,6 +461,79 @@ def rating_lines(r, price):
     return lines
 
 
+
+# ----------------------------------------------------------- your spec rules
+BAD_CHIPSET_RE = re.compile(r"\b(A320|A520|A620|B350|B450|B550|X370|X470|X570|H310|H410|H510|H610|B460|B560)\b", re.I)
+GOOD_CHIPSET_RE = re.compile(r"\b(B650E?|B840|B850|X670E?|X870E?|B660|H670|Z690|B760|H770|Z790|B860|H870|Z890)\b", re.I)
+LIQUID_RE = re.compile(r"liquid|\baio\b|water[- ]?cool|\b(?:240|280|360|420)\s?mm\b", re.I)
+AIR_RE = re.compile(r"air[- ]?(?:cooler|cooled|cooling)|tower cooler", re.I)
+PSU_TIER_RE = re.compile(r"80\s?\+?\s*(?:plus)?\s*(white|bronze|silver|gold|platinum|titanium)", re.I)
+LOW_CPU_RE = re.compile(r"Ryzen\s*3\b|\bi3[- ]?\d|Core\s*(?:Ultra\s*)?3\b|Athlon|Pentium|Celeron", re.I)
+AM4_CPU_RE = re.compile(r"Ryzen\s*[3579]\s*(?:PRO\s*)?[345]\d{3}", re.I)       # Ryzen 3000/4000/5000 = DDR4-only socket
+OLD_INTEL_RE = re.compile(r"\bi[3579][- ]?(\d{4,5})(?!\d)(?!\s?(?:GB|TB|MHz|W\b))", re.I)
+
+
+def parse_ram_speed(t):
+    for rx in (r"(?<![\d.])(\d{4,5})\s?(?:MHz|MT/s)", r"DDR5[- ]?(\d{4,5})"):
+        m = re.search(rx, t, re.I)
+        if m and 3200 <= int(m.group(1)) <= 9000:
+            return int(m.group(1))
+    return None
+
+
+def check_requirements(t):
+    """Compare a title to your spec rules.
+    Returns (fails, unknown): reasons the PC breaks a rule, and rules we can't check."""
+    fails, unknown = [], []
+
+    ram = parse_ram(t)
+    if ram:
+        gb, ddr = ram
+        if gb < MIN_RAM_GB:
+            fails.append(f"{gb}GB RAM")
+        elif ddr == "ddr4":
+            fails.append("DDR4 RAM")
+        elif ddr == "unknown":
+            unknown.append("DDR5 (type not stated)")
+    else:
+        unknown.append("RAM amount")
+    speed = parse_ram_speed(t)
+    if speed and speed < MIN_RAM_MHZ:
+        fails.append(f"{speed}MHz RAM")
+    elif not speed:
+        unknown.append("RAM speed")
+
+    old = OLD_INTEL_RE.search(t)
+    if LOW_CPU_RE.search(t):
+        fails.append("CPU below Ryzen 5 / Core i5")
+    elif AM4_CPU_RE.search(t):
+        fails.append("older Ryzen (DDR4-only platform)")
+    elif old and int(old.group(1)[:2] if len(old.group(1)) == 5 else old.group(1)[0]) < 12:
+        fails.append("older Intel CPU (DDR4-only generation)")
+    elif not parse_cpu(t):
+        unknown.append("CPU")
+
+    if BAD_CHIPSET_RE.search(t):
+        fails.append("older motherboard (" + BAD_CHIPSET_RE.search(t).group(1).upper() + ")")
+    elif not GOOD_CHIPSET_RE.search(t):
+        unknown.append("motherboard (B650/B760 or newer)")
+
+    watts = parse_psu_watts(t)
+    tier = PSU_TIER_RE.search(t)
+    if watts and watts < MIN_PSU_WATTS:
+        fails.append(f"{watts}W PSU")
+    if tier and tier.group(1).lower() in ("white",):
+        fails.append("80+ White PSU")
+    if not watts or not tier:
+        unknown.append("PSU " + ("wattage/rating" if not watts and not tier else "wattage" if not watts else "rating (Bronze+)"))
+
+    if LIQUID_RE.search(t) and not ALLOW_LIQUID_COOLING:
+        fails.append("liquid cooling")
+    elif not AIR_RE.search(t):
+        unknown.append("cooler type")
+    return fails, unknown
+
+
 # ------------------------------------------------------------------- core
 def load_state():
     try:
@@ -457,6 +560,8 @@ def notify(deal):
     if deal.get("posted"):
         lines.append(age_text(deal["posted"]) + " - may sell out or end soon")
     lines += rating_lines(deal.get("rating"), deal["price"])
+    if deal.get("verify"):
+        lines.append("🔎 Verify before buying: " + ", ".join(deal["verify"]))
     if deal.get("note"):
         lines.append(deal["note"])
     lines.append(deal["url"])
@@ -483,16 +588,28 @@ def notify(deal):
 def check_once():
     state = load_state()
     candidates = fetch_bestbuy() + fetch_slickdeals()
-    candidates.sort(key=lambda d: d.get("rank", 2))  # confirmed shipping first
+    # confirmed shipping first; within that, Ryzen (AMD) systems before Intel
+    candidates.sort(key=lambda d: (d.get("rank", 2), 0 if re.search(r"Ryzen", d["title"], re.I) else 1))
     seen_this_run, new = set(), 0
+    drops = {"not a qualifying PC": 0, "price outside range": 0, "broke a spec rule": 0}
     for d in candidates:
         if d["id"] in seen_this_run:
             continue
         seen_this_run.add(d["id"])
-        if not looks_like_match(d["title"]) or d["price"] > MAX_PRICE or d["price"] < 400:
+        if not looks_like_match(d["title"]):
+            drops["not a qualifying PC"] += 1
+            continue
+        if d["price"] > MAX_PRICE or d["price"] < 400:
+            drops["price outside range"] += 1
             continue
         if d["id"] in state:
             continue  # already alerted once - never again
+        fails, unknown = check_requirements(d["title"])
+        if fails:
+            drops["broke a spec rule"] += 1
+            print(f"  skipped ({', '.join(fails)}): {d['title'][:90]}")
+            continue  # breaks one of your spec rules
+        d["verify"] = unknown
 
         d["rating"] = rate_pc(d["title"], d["price"])
         fp = d["rating"]["fp"] if d["rating"] else None
@@ -518,14 +635,17 @@ def check_once():
         save_state(state)  # save right away so a crash can't cause repeats
         new += 1
     save_state(state)
-    print(f"{time.strftime('%H:%M:%S')} checked {len(seen_this_run)} listings, {new} new deal(s).")
+    print(f"{time.strftime('%H:%M:%S')} checked {len(seen_this_run)} listings, {new} new deal(s). "
+          f"Dropped: {drops['not a qualifying PC']} not a qualifying PC, {drops['price outside range']} price, "
+          f"{drops['broke a spec rule']} broke a spec rule.")
 
 
 def main():
     if "--test" in sys.argv:
         t = "HP OMEN 35L Gaming Desktop - AMD Ryzen 7 9700X - 32GB DDR5 - NVIDIA GeForce RTX 5070 - 1TB SSD"
         notify({"source": "Test (sample alert)", "title": t, "price": 1299, "was": 1599,
-                "url": "https://example.com", "rating": rate_pc(t, 1299)})
+                "url": "https://example.com", "rating": rate_pc(t, 1299),
+                "verify": check_requirements(t)[1]})
         return
     if "--once" in sys.argv:
         check_once()
