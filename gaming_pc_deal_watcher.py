@@ -30,6 +30,8 @@ Usage
   python gaming_pc_deal_watcher.py            # runs forever
   python gaming_pc_deal_watcher.py --once     # single check, then exit
   python gaming_pc_deal_watcher.py --test     # send a sample alert
+  python gaming_pc_deal_watcher.py --backtest # one-time audit of old + current listings (sends nothing)
+  python gaming_pc_deal_watcher.py --backtest --send   # same, but ALSO posts the qualifying ones to Discord
 
 Settings (environment variables, all optional)
   MAX_PRICE=1875          price cap
@@ -54,7 +56,7 @@ from pathlib import Path
 
 MAX_PRICE = float(os.getenv("MAX_PRICE", "1875"))
 CHECK_MINUTES = float(os.getenv("CHECK_MINUTES", "15"))
-MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "1500"))
+MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "24"))
 PICKUP_ZIP = os.getenv("PICKUP_ZIP", "").strip()
 PICKUP_MILES = os.getenv("PICKUP_MILES", "50").strip() or "50"
 BESTBUY_API_KEY = os.getenv("BESTBUY_API_KEY", "")
@@ -233,7 +235,7 @@ def bestbuy_pickup_stores(sku):
 
 
 # -------------------------------------------------------------- Slickdeals
-def fetch_slickdeals():
+def fetch_slickdeals(max_age_hours=MAX_AGE_HOURS, keep_unpriced=False):
     deals = []
     now = datetime.now(timezone.utc)
     for q in SLICKDEALS_QUERIES:
@@ -257,16 +259,19 @@ def fetch_slickdeals():
                 if m:
                     price = float(m.group(1).replace(",", ""))
                     price_note = "💲 Price taken from the post text, not the title - confirm it on the page"
-            if price is None:
+            if price is None and not keep_unpriced:
                 continue
             # Post timestamp must exist and be within the last MAX_AGE_HOURS
+            # (max_age_hours=None is only used by the backtest: keep old posts)
             try:
                 posted = parsedate_to_datetime(item.findtext("pubDate") or "")
                 if posted.tzinfo is None:
                     posted = posted.replace(tzinfo=timezone.utc)
             except Exception:
-                continue
-            if not (0 <= (now - posted).total_seconds() <= MAX_AGE_HOURS * 3600):
+                if max_age_hours is not None:
+                    continue
+                posted = None
+            if max_age_hours is not None and not (0 <= (now - posted).total_seconds() <= max_age_hours * 3600):
                 continue
             if INSTORE_ONLY_RE.search(title):
                 continue  # can't be shipped
@@ -553,6 +558,8 @@ def save_state(state):
 def notify(deal):
     was = f" (was ${deal['was']:,.0f})" if deal.get("was") else ""
     lines = [f"[{deal['source']}] ${deal['price']:,.0f}{was}", deal["title"]]
+    if deal.get("prefix"):
+        lines.insert(0, deal["prefix"])
     if deal.get("ship"):
         lines.append(deal["ship"])
     if deal.get("stores"):
@@ -640,12 +647,137 @@ def check_once():
           f"{drops['broke a spec rule']} broke a spec rule.")
 
 
+# ---------------------------------------------------------------- backtest
+# (name, price, should it alert?)
+SELF_CHECK_CASES = [
+    ("CyberPowerPC Gamer Master - AMD Ryzen 7 9700X - 32GB DDR5 6000MHz - NVIDIA GeForce RTX 5070 - 2TB SSD - 750W 80+ Gold - B650 - air cooled", 1499, True),
+    ("Skytech Shadow RTX 5070 Ryzen 7 7700 32GB DDR5", 1399, True),
+    ("Gaming PC RX 9070 XT Ryzen 7 9700X 32GB DDR5 5600MHz", 1799, True),
+    ("Alienware Aurora RTX 5070 Ryzen 7 9700X 32GB DDR5", 1699, True),
+    ("HP OMEN 35L Gaming Desktop - Ryzen 7 9700X - 16GB DDR5 - RTX 5070", 1299, False),   # 16GB RAM
+    ("Gaming Desktop Ryzen 5 5600 RTX 5070 32GB DDR4 B550", 1199, False),                  # DDR4 / B550
+    ("Gaming PC Ryzen 7 9700X RTX 5070 32GB DDR5 360mm AIO liquid cooled", 1499, False),   # liquid cooling
+    ("Gaming PC Ryzen 7 9700X RTX 5070 32GB DDR5 550W", 1399, False),                      # PSU too small
+    ("Gaming PC RTX 5070 Ti Ryzen 9 9900X 32GB DDR5 6000MHz", 1999, False),                # over price cap
+    ("ASUS Prime RTX 5070 12GB Graphics Card", 549, False),                                # not a PC
+    ("ASUS ROG Gaming Laptop RTX 5070 32GB", 1599, False),                                 # laptop
+    ("Gaming Desktop RTX 4080 Super Ryzen 7 7800X3D 32GB DDR5", 1699, False),              # removed GPU
+    ("Gaming PC RTX 5060 Ti Ryzen 5 7600 32GB DDR5", 999, False),                          # GPU too weak
+]
+
+
+def evaluate(title, price):
+    """Same checks a live run applies. Returns (would_alert, reason, verify_list)."""
+    if not looks_like_match(title):
+        return False, "not a qualifying PC / GPU", []
+    if price is None:
+        return False, "no price found in title or post text", []
+    if price > MAX_PRICE or price < 400:
+        return False, f"price ${price:,.0f} outside $400-${MAX_PRICE:,.0f}", []
+    fails, unknown = check_requirements(title)
+    if fails:
+        return False, "broke a rule: " + ", ".join(fails), unknown
+    return True, "meets your rules", unknown
+
+
+def backtest():
+    out = ["# Backtest report", "",
+           "Nothing is saved, and your 'already seen' list is untouched. Old posts are included on purpose.", ""]
+
+    out += ["## 1. Built-in self-check (works even if the internet feeds are empty)", ""]
+    bad = 0
+    for title, price, expect in SELF_CHECK_CASES:
+        got, reason, _ = evaluate(title, price)
+        ok = got == expect
+        bad += not ok
+        out.append(f"- {'✅' if ok else '❌ WRONG'} expected {'ALERT' if expect else 'SKIP '}, got "
+                   f"{'ALERT' if got else 'SKIP '} ({reason}): {title[:80]}")
+    out += ["", f"**Self-check: {len(SELF_CHECK_CASES) - bad}/{len(SELF_CHECK_CASES)} correct.**", ""]
+
+    out += ["## 2. Real listings (recent AND older, expired included)", ""]
+    deals = fetch_bestbuy() + fetch_slickdeals(max_age_hours=None, keep_unpriced=True)
+    seen, alerts, drops = set(), [], {}
+    for d in deals:
+        if d["id"] in seen:
+            continue
+        seen.add(d["id"])
+        ok, reason, unknown = evaluate(d["title"], d["price"])
+        if ok:
+            alerts.append((d, unknown))
+        else:
+            drops.setdefault(reason.split(":")[0].split(" $")[0], []).append((d, reason))
+    out.append(f"Scanned **{len(seen)}** listings (Best Buy shows today's listings; Slickdeals includes whatever "
+               f"older posts its search feed returns). **{len(alerts)}** would have alerted.")
+    out.append("")
+    out.append(f"### ✅ Would alert ({len(alerts)})")
+    out.append("")
+    for d, unknown in alerts:
+        age = age_text(d.get("posted")) or "Best Buy listing"
+        old = ""
+        if d.get("posted") and (datetime.now(timezone.utc) - d["posted"]).total_seconds() > MAX_AGE_HOURS * 3600:
+            old = f" ⏳ older than {MAX_AGE_HOURS:g}h, so a live run would skip it"
+        r = rate_pc(d["title"], d["price"])
+        out.append(f"- **${d['price']:,.0f}** [{d['source']}, {age}]{old}  \n  {d['title'][:110]}")
+        if r:
+            out.append(f"  \n  score {r['score']}/10, should cost ~${r['fair']:,.0f} → {verdict(r['ratio'])}"
+                       + (f"; verify: {', '.join(unknown)}" if unknown else ""))
+        out.append(f"  \n  {d['url']}")
+    # ---- optional: push the "would alert" listings to Discord/ntfy as a real end-to-end test
+    send = os.getenv("BACKTEST_SEND", "").lower() in ("1", "true", "yes") or "--send" in sys.argv
+    if send:
+        out += ["", "### 📨 Discord test"]
+        if not (DISCORD_WEBHOOK or NTFY_TOPIC):
+            out.append("⚠️ No DISCORD_WEBHOOK (or NTFY_TOPIC) is set, so nothing could be sent.")
+        else:
+            limit = int(os.getenv("BACKTEST_MAX_ALERTS", "8"))
+            banner = "🧪 BACKTEST - old listing sent only to test your alerts; it may have expired"
+            batch = sorted((a for a in alerts), key=lambda a: (a[0].get("rank", 2),
+                           0 if re.search(r"Ryzen", a[0]["title"], re.I) else 1))[:limit]
+            for d, unknown in batch:
+                d["rating"] = rate_pc(d["title"], d["price"])
+                d["verify"] = unknown
+                d["prefix"] = banner
+                if d["source"] == "Best Buy" and PICKUP_ZIP:
+                    stores = bestbuy_pickup_stores(d["sku"])
+                    if stores:
+                        d["stores"] = stores
+                notify(d)
+                time.sleep(1.5)  # stay under Discord's rate limit
+            if batch:
+                out.append(f"Sent **{len(batch)}** of {len(alerts)} qualifying listings (cap {limit}, "
+                           f"change with BACKTEST_MAX_ALERTS). Check your Discord channel.")
+            else:
+                t = "HP OMEN 35L Gaming Desktop - AMD Ryzen 7 9700X - 32GB DDR5 - NVIDIA GeForce RTX 5070 - 1TB SSD"
+                notify({"source": "Test (sample alert)", "title": t, "price": 1299, "was": 1599,
+                        "url": "https://example.com", "rating": rate_pc(t, 1299), "prefix": banner,
+                        "verify": check_requirements(t)[1]})
+                out.append("No real listings qualified, so one built-in SAMPLE alert was sent instead. "
+                           "Check your Discord channel.")
+    out += ["", "### ❌ Dropped"]
+    for group, items in sorted(drops.items(), key=lambda kv: -len(kv[1])):
+        out += ["", f"**{group}: {len(items)}**"]
+        for d, reason in items[:12]:
+            out.append(f"- {reason} | {('$%.0f' % d['price']) if d['price'] else 'no price'} | {d['title'][:90]}")
+        if len(items) > 12:
+            out.append(f"- ...and {len(items) - 12} more")
+    report = "\n".join(out)
+    print(report)
+    Path(__file__).with_name("backtest_report.md").write_text(report)
+    summary = os.getenv("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as f:
+            f.write(report + "\n")
+
+
 def main():
     if "--test" in sys.argv:
         t = "HP OMEN 35L Gaming Desktop - AMD Ryzen 7 9700X - 32GB DDR5 - NVIDIA GeForce RTX 5070 - 1TB SSD"
         notify({"source": "Test (sample alert)", "title": t, "price": 1299, "was": 1599,
                 "url": "https://example.com", "rating": rate_pc(t, 1299),
                 "verify": check_requirements(t)[1]})
+        return
+    if "--backtest" in sys.argv:
+        backtest()
         return
     if "--once" in sys.argv:
         check_once()
