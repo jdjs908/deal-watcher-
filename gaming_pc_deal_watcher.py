@@ -63,7 +63,7 @@ BESTBUY_API_KEY = os.getenv("BESTBUY_API_KEY", "")
 NTFY_TOPIC = os.getenv("NTFY_TOPIC", "")
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK", "")
 # Your spec rules
-MIN_RAM_GB = 16
+MIN_RAM_GB = 32
 MIN_RAM_MHZ = 5600
 MIN_PSU_WATTS = 650
 ALLOW_LIQUID_COOLING = os.getenv("ALLOW_LIQUID_COOLING", "0") == "1"   # "air cooling only"
