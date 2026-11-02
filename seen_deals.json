@@ -253,5 +253,15 @@
     "price": 1699.99,
     "title": "Skytech Shadow 5 Gaming PC: Intel Ultra 7 270K Plus, RTX 5070, 32GB DDR5, 1TB SSD $1699.99",
     "t": 1793602359.572616
+  },
+  "sd-20246538": {
+    "price": 1600.0,
+    "title": "[Micro Center] PowerSpec G536 Gaming PC: Ryzen 5 7500X3D, RTX 5070 12GB, 32GB DDR5, 1TB SSD $1600 + Free Store Pickup",
+    "t": 1793657359.323737
+  },
+  "fp-RTX 5070|Ryzen 5 7500X3D|32|1.0|1600": {
+    "price": 1600.0,
+    "title": "[Micro Center] PowerSpec G536 Gaming PC: Ryzen 5 7500X3D, RTX 5070 12GB, 32GB DDR5, 1TB SSD $1600 + Free Store Pickup",
+    "t": 1793657359.323737
   }
 }
