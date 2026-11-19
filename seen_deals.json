@@ -318,5 +318,15 @@
     "price": 1779.99,
     "title": "iBUYPOWER Element Gaming Desktop PC: Ryzen 7 9700F, RTX 5070, 32GB DDR5, 1TB SSD $1779.99",
     "t": 1795081025.1296563
+  },
+  "sd-20344704": {
+    "price": 1799.0,
+    "title": "CyberPowerPC - Gaming Desktop - Ryzen 7 9800X3D, RX 9070 16GB, 32GB DDR5, 1TB SSD $1799",
+    "t": 1795113804.6391864
+  },
+  "fp-RX 9070|Ryzen 7 9800X3D|32|1.0|1799": {
+    "price": 1799.0,
+    "title": "CyberPowerPC - Gaming Desktop - Ryzen 7 9800X3D, RX 9070 16GB, 32GB DDR5, 1TB SSD $1799",
+    "t": 1795113804.6391864
   }
 }
