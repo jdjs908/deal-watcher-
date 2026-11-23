@@ -343,5 +343,15 @@
     "price": 1679.0,
     "title": "GIGABYTE AORUS Elite: 16\" QHD+ IPS 165Hz, Intel Ultra 9 275HX, RTX 5070, 32GB DDR5, 1TB SSD $1679",
     "t": 1795215094.4323628
+  },
+  "sd-20377224": {
+    "price": 1730.99,
+    "title": "Open Box Excellent: HP OMEN - 35L Gaming Desktop - AMD Ryzen 7 8700F - 32GB DDR5 Memory - NVIDIA GeForce RTX 5070 - 1TB SSD - Panda Metal $1730.99",
+    "t": 1795447773.9987857
+  },
+  "fp-RTX 5070|Ryzen 7 8700F|32|1.0|1730": {
+    "price": 1730.99,
+    "title": "Open Box Excellent: HP OMEN - 35L Gaming Desktop - AMD Ryzen 7 8700F - 32GB DDR5 Memory - NVIDIA GeForce RTX 5070 - 1TB SSD - Panda Metal $1730.99",
+    "t": 1795447773.9987857
   }
 }
