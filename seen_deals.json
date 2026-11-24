@@ -353,5 +353,15 @@
     "price": 1730.99,
     "title": "Open Box Excellent: HP OMEN - 35L Gaming Desktop - AMD Ryzen 7 8700F - 32GB DDR5 Memory - NVIDIA GeForce RTX 5070 - 1TB SSD - Panda Metal $1730.99",
     "t": 1795447773.9987857
+  },
+  "sd-20379762": {
+    "price": 1849.99,
+    "title": "CyberPowerPC - Gaming Desktop - AMD Ryzen 7 9800X3D 2024 - AMD Radeon RX 9070 16GB - 32GB DDR5 Memory - 1TB SSD Storage $1849.99",
+    "t": 1795487327.209774
+  },
+  "fp-RX 9070|Ryzen 7 9800X3D|32|1.0|1849": {
+    "price": 1849.99,
+    "title": "CyberPowerPC - Gaming Desktop - AMD Ryzen 7 9800X3D 2024 - AMD Radeon RX 9070 16GB - 32GB DDR5 Memory - 1TB SSD Storage $1849.99",
+    "t": 1795487327.209774
   }
 }
