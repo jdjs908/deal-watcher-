@@ -363,5 +363,20 @@
     "price": 1849.99,
     "title": "CyberPowerPC - Gaming Desktop - AMD Ryzen 7 9800X3D 2024 - AMD Radeon RX 9070 16GB - 32GB DDR5 Memory - 1TB SSD Storage $1849.99",
     "t": 1795487327.209774
+  },
+  "sd-20388630": {
+    "price": 1642.0,
+    "title": "(Cert. Refurb) Acer Nitro V 16S AI: 16\" QHD+ IPS 180Hz, Ryzen AI 9 365, RTX 5070 Ti, 32GB DDR5, 2TB SSD $1642.4",
+    "t": 1795560597.2997785
+  },
+  "sd-20387478": {
+    "price": 1785.47,
+    "title": "Acer Predator Helios Neo 16S AI 16\" RTX 5070 Ti, Intel Core Ultra 9 275HX 32GB, 1TB | Refurbished $1785.47",
+    "t": 1795560598.7626014
+  },
+  "fp-RTX 5070 Ti|Core Ultra 9 275|32|1.0|1785": {
+    "price": 1785.47,
+    "title": "Acer Predator Helios Neo 16S AI 16\" RTX 5070 Ti, Intel Core Ultra 9 275HX 32GB, 1TB | Refurbished $1785.47",
+    "t": 1795560598.7626014
   }
 }
