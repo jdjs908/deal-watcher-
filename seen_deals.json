@@ -378,5 +378,25 @@
     "price": 1785.47,
     "title": "Acer Predator Helios Neo 16S AI 16\" RTX 5070 Ti, Intel Core Ultra 9 275HX 32GB, 1TB | Refurbished $1785.47",
     "t": 1795560598.7626014
+  },
+  "sd-20395431": {
+    "price": 1648.99,
+    "title": "Woot! New Customers: Thermaltake LCGS Versa i570S: i9-14900KF, RTX 5070, 32GB DDR5, 1TB SSD $1648.99",
+    "t": 1795621900.2228029
+  },
+  "fp-RTX 5070|Core i9-14900KF|32|1.0|1648": {
+    "price": 1648.99,
+    "title": "Woot! New Customers: Thermaltake LCGS Versa i570S: i9-14900KF, RTX 5070, 32GB DDR5, 1TB SSD $1648.99",
+    "t": 1795621900.2228029
+  },
+  "sd-20392425": {
+    "price": 1745.99,
+    "title": "Thermaltake LCGS Versa i570S: i9-14900KF, RTX 5070, 32GB DDR5, 1TB SSD $1745.99",
+    "t": 1795621901.3576398
+  },
+  "fp-RTX 5070|Core i9-14900KF|32|1.0|1745": {
+    "price": 1745.99,
+    "title": "Thermaltake LCGS Versa i570S: i9-14900KF, RTX 5070, 32GB DDR5, 1TB SSD $1745.99",
+    "t": 1795621901.3576398
   }
 }
