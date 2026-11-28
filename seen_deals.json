@@ -303,5 +303,25 @@
     "price": 1309.0,
     "title": "[OUT OF STOCK] Refurbished: Acer Nitro V 17 AI 17.3\" AMD Ryzen 7 8845HS, 32GB DDR5, RTX 5070, 1TB SSD, Win11, FHD, $1309",
     "t": 1795830175.7957556
+  },
+  "sd-20425362": {
+    "price": 1499.99,
+    "title": "(Cert. Refurb) MSI Crosshair A18 HX: 18\" QHD+ IPS 240Hz, Ryzen 9 8940HX, RTX 5070, 32GB DDR5, 1TB SSD $1499.99",
+    "t": 1795858417.2207778
+  },
+  "fp-RTX 5070|Ryzen 9 8940|32|1.0|1499": {
+    "price": 1499.99,
+    "title": "(Cert. Refurb) MSI Crosshair A18 HX: 18\" QHD+ IPS 240Hz, Ryzen 9 8940HX, RTX 5070, 32GB DDR5, 1TB SSD $1499.99",
+    "t": 1795858417.2207778
+  },
+  "sd-20425419": {
+    "price": 1449.99,
+    "title": "(Cert. Refurb) MSI Crosshair 16 Max HX: 16\" QHD+ OLED 165Hz, Intel Ultra 9 290HX Plus, RTX 5070, 32GB DDR5, 1TB SSD $1449.99",
+    "t": 1795858418.907249
+  },
+  "sd-20425338": {
+    "price": 1849.99,
+    "title": "Cert. Refurb: MSI Raider 16 Max HX (2026): 16\" QHD+ 240Hz OLED, Intel Ultra 9 290HX Plus, RTX 5070Ti, 32GB DDR5, 1TB SSD $1849.99",
+    "t": 1795858420.07256
   }
 }
